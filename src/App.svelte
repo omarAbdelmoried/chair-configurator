@@ -551,7 +551,7 @@
     position: relative;
     min-height: 320px;
     overflow: hidden;
-    background: radial-gradient(ellipse at 50% 48%, oklch(0.94 0.012 81) 0%, oklch(0.915 0.016 79) 44%, var(--stage) 100%);
+    background: transparent;
   }
   canvas {
     position: absolute;
@@ -573,10 +573,7 @@
     flex-direction: column;
     gap: 0.38rem;
     padding: 0.2rem;
-    border: 1px solid oklch(0.86 0.008 260);
     border-radius: 0.8rem;
-    background: rgba(255, 255, 255, 0.48);
-    backdrop-filter: blur(2px);
   }
   .tool-button {
     display: grid;
@@ -1101,7 +1098,6 @@
     .action-bar { padding-right: 1.1rem; padding-left: 1.1rem; }
   }
   @media (max-width: 390px) {
-    .stage-tools { right: 0.75rem; left: 0.75rem; }
     .stage-tools button { padding-right: 0.6rem; padding-left: 0.6rem; font-size: 0.72rem; }
     .base-description { display: none; }
     .base-option { min-height: 8.5rem; }
