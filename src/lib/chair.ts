@@ -1,5 +1,13 @@
 import * as THREE from 'three';
-import { findBase, findColor, type ChairConfig } from './config';
+import {
+  findBase,
+  findBaseColor,
+  findBaseOn,
+  findColor,
+  type BaseOnOption,
+  type BaseColorOption,
+  type ChairConfig
+} from './config';
 
 const SEAT_HEIGHT = 0.43;
 const SHELL_W = 0.5;
@@ -80,10 +88,43 @@ function legPoints() {
   return { top, foot };
 }
 
-function buildDowelBase(): THREE.Group {
+function createBaseMaterial(finish: BaseColorOption): THREE.MeshStandardMaterial {
+  return new THREE.MeshStandardMaterial({
+    color: finish.hex,
+    metalness: finish.metalness,
+    roughness: finish.roughness
+  });
+}
+
+function addGlides(
+  group: THREE.Group,
+  points: THREE.Vector3[],
+  option: BaseOnOption
+): void {
+  const material = new THREE.MeshStandardMaterial({
+    color: option.color,
+    roughness: option.material === 'felt' ? 0.96 : 0.72
+  });
+  const height = option.material === 'felt' ? 0.012 : 0.02;
+  const radius = option.material === 'felt' ? 0.022 : 0.018;
+  const geometry = new THREE.CylinderGeometry(radius, radius * 1.08, height, 20);
+
+  points.forEach((point) => {
+    const glide = new THREE.Mesh(geometry, material);
+    glide.position.set(point.x, height / 2, point.z);
+    glide.castShadow = true;
+    glide.receiveShadow = true;
+    group.add(glide);
+  });
+}
+
+function buildDowelBase(finish: BaseColorOption, glides: BaseOnOption): THREE.Group {
   const g = new THREE.Group();
-  const wood = new THREE.MeshStandardMaterial({ color: 0xd2a76b, roughness: 0.55 });
-  const wire = new THREE.MeshStandardMaterial({ color: 0xc9ccd0, metalness: 0.9, roughness: 0.25 });
+  const wood = createBaseMaterial(finish);
+  const wire =
+    finish.id === 'natural'
+      ? new THREE.MeshStandardMaterial({ color: 0xc9ccd0, metalness: 0.9, roughness: 0.25 })
+      : createBaseMaterial(finish);
   const { top, foot } = legPoints();
 
   top.forEach((t, i) => g.add(rodBetween(foot[i], t, 0.017, wood)));
@@ -97,12 +138,13 @@ function buildDowelBase(): THREE.Group {
     rodBetween(brace[0], brace[2], 0.004, wire),
     rodBetween(brace[1], brace[3], 0.004, wire)
   );
+  addGlides(g, foot, glides);
   return g;
 }
 
-function buildEiffelBase(): THREE.Group {
+function buildEiffelBase(finish: BaseColorOption, glides: BaseOnOption): THREE.Group {
   const g = new THREE.Group();
-  const chrome = new THREE.MeshStandardMaterial({ color: 0xdfe2e6, metalness: 1, roughness: 0.15 });
+  const chrome = createBaseMaterial(finish);
   const { top, foot } = legPoints();
 
   top.forEach((t, i) => g.add(rodBetween(foot[i], t, 0.006, chrome)));
@@ -111,12 +153,13 @@ function buildEiffelBase(): THREE.Group {
   const f = foot;
   [[0, 1], [2, 3], [0, 2], [1, 3]].forEach(([a, b]) => g.add(rodBetween(f[a], f[b], 0.005, chrome)));
   g.add(rodBetween(top[0], top[3], 0.005, chrome), rodBetween(top[1], top[2], 0.005, chrome));
+  addGlides(g, foot, glides);
   return g;
 }
 
-function buildSledBase(): THREE.Group {
+function buildSledBase(finish: BaseColorOption, glides: BaseOnOption): THREE.Group {
   const g = new THREE.Group();
-  const steel = new THREE.MeshStandardMaterial({ color: 0x2a2d31, metalness: 0.8, roughness: 0.35 });
+  const steel = createBaseMaterial(finish);
 
   for (const side of [-1, 1]) {
     const x = side * 0.2;
@@ -145,6 +188,14 @@ function buildSledBase(): THREE.Group {
     rodBetween(new THREE.Vector3(-0.2, 0.28, 0.22), new THREE.Vector3(0.2, 0.28, 0.22), 0.01, steel),
     rodBetween(new THREE.Vector3(-0.2, 0.28, -0.2), new THREE.Vector3(0.2, 0.28, -0.2), 0.01, steel)
   );
+  addGlides(
+    g,
+    [-0.2, 0.2].flatMap((x) => [
+      new THREE.Vector3(x, 0, -0.2),
+      new THREE.Vector3(x, 0, 0.2)
+    ]),
+    glides
+  );
   return g;
 }
 
@@ -167,6 +218,43 @@ export function buildChair(cfg: ChairConfig): THREE.Group {
   shell.receiveShadow = true;
   chair.add(shell);
 
+  if (cfg.shellStyle === 'armchair') {
+    const armMaterial = new THREE.MeshPhysicalMaterial({
+      color: shellColor.hex,
+      roughness: 0.38,
+      clearcoat: 0.35,
+      clearcoatRoughness: 0.4
+    });
+
+    for (const side of [-1, 1]) {
+      const armPath = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(side * 0.205, SEAT_HEIGHT + 0.12, 0.14),
+        new THREE.Vector3(side * 0.225, SEAT_HEIGHT + 0.2, 0.08),
+        new THREE.Vector3(side * 0.235, SEAT_HEIGHT + 0.22, -0.12),
+        new THREE.Vector3(side * 0.22, SEAT_HEIGHT + 0.2, -0.26)
+      ]);
+      const arm = new THREE.Mesh(new THREE.TubeGeometry(armPath, 32, 0.018, 12), armMaterial);
+      arm.castShadow = true;
+      arm.receiveShadow = true;
+      chair.add(arm);
+
+      chair.add(
+        rodBetween(
+          new THREE.Vector3(side * 0.205, SEAT_HEIGHT + 0.12, 0.14),
+          new THREE.Vector3(side * 0.18, SEAT_HEIGHT + 0.015, 0.13),
+          0.012,
+          armMaterial
+        ),
+        rodBetween(
+          new THREE.Vector3(side * 0.22, SEAT_HEIGHT + 0.2, -0.26),
+          new THREE.Vector3(side * 0.17, SEAT_HEIGHT + 0.015, -0.2),
+          0.012,
+          armMaterial
+        )
+      );
+    }
+  }
+
   if (cfg.seatPad) {
     const pad = new THREE.Mesh(
       new THREE.SphereGeometry(1, 32, 16),
@@ -179,7 +267,15 @@ export function buildChair(cfg: ChairConfig): THREE.Group {
   }
 
   const base = findBase(cfg.base).id;
-  chair.add(base === 'dowel' ? buildDowelBase() : base === 'eiffel' ? buildEiffelBase() : buildSledBase());
+  const baseColor = findBaseColor(cfg.baseColor);
+  const baseOn = findBaseOn(cfg.baseOn);
+  chair.add(
+    base === 'dowel'
+      ? buildDowelBase(baseColor, baseOn)
+      : base === 'eiffel'
+        ? buildEiffelBase(baseColor, baseOn)
+        : buildSledBase(baseColor, baseOn)
+  );
 
   return chair;
 }
