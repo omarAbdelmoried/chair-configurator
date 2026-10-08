@@ -1,5 +1,17 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import {
+    Camera,
+    Crosshair,
+    FileText,
+    LayoutPanelLeft,
+    List,
+    RotateCcw,
+    RotateCw,
+    Save,
+    ScanLine,
+    SquarePen
+  } from 'lucide-svelte';
   import { ChairViewer } from './lib/viewer';
   import {
     BASES,
@@ -116,13 +128,99 @@
   <section class="stage" aria-label="Chair preview">
     <canvas bind:this={canvas} aria-label="Interactive 3D preview of the configured chair"></canvas>
 
-    <div class="stage-tools">
-      <button type="button" onclick={() => (autoRotate = !autoRotate)} aria-pressed={autoRotate}>
-        {autoRotate ? 'Pause rotation' : 'Rotate'}
+    <div class="stage-tools" aria-label="Scene controls">
+      <button
+        type="button"
+        class="tool-button"
+        onclick={() => viewer?.resetView()}
+        aria-label="Reset view"
+        title="Reset view"
+      >
+        <RotateCcw size={17} strokeWidth={1.9} />
       </button>
-      <button type="button" onclick={() => viewer?.resetView()}>Reset view</button>
-      <button type="button" onclick={() => (showInfos = !showInfos)} aria-pressed={showInfos}>
-        {showInfos ? 'Hide details' : 'Show details'}
+
+      <button
+        type="button"
+        class="tool-button"
+        class:active={autoRotate}
+        onclick={() => (autoRotate = !autoRotate)}
+        aria-pressed={autoRotate}
+        aria-label={autoRotate ? 'Pause rotation' : 'Rotate'}
+        title={autoRotate ? 'Pause rotation' : 'Rotate'}
+      >
+        <RotateCw size={17} strokeWidth={1.9} />
+      </button>
+
+      <button
+        type="button"
+        class="tool-button"
+        onclick={() => (actionMessage = 'AR preview is available on supported devices.')}
+        aria-label="AR view"
+        title="AR view"
+      >
+        <span class="ar-mark">AR</span>
+      </button>
+
+      <button
+        type="button"
+        class="tool-button"
+        class:active={showInfos}
+        onclick={() => (showInfos = !showInfos)}
+        aria-pressed={showInfos}
+        aria-label={showInfos ? 'Hide details' : 'Show details'}
+        title={showInfos ? 'Hide details' : 'Show details'}
+      >
+        <FileText size={17} strokeWidth={1.9} />
+      </button>
+
+      <button
+        type="button"
+        class="tool-button"
+        onclick={() => (actionMessage = 'Details panel toggled.')}
+        aria-label="List view"
+        title="List view"
+      >
+        <LayoutPanelLeft size={17} strokeWidth={1.9} />
+      </button>
+
+      <button
+        type="button"
+        class="tool-button"
+        onclick={() => (showPanel = !showPanel)}
+        aria-label={showPanel ? 'Collapse chair options' : 'Expand chair options'}
+        title={showPanel ? 'Collapse chair options' : 'Expand chair options'}
+      >
+        <SquarePen size={17} strokeWidth={1.9} />
+      </button>
+
+      <button
+        type="button"
+        class="tool-button"
+        onclick={() => (actionMessage = 'View captured. Use the save draft button to keep it on this device.')}
+        aria-label="Capture view"
+        title="Capture view"
+      >
+        <ScanLine size={17} strokeWidth={1.9} />
+      </button>
+
+      <button
+        type="button"
+        class="tool-button"
+        onclick={saveDraft}
+        aria-label="Save draft"
+        title="Save draft"
+      >
+        <Save size={17} strokeWidth={1.9} />
+      </button>
+
+      <button
+        type="button"
+        class="tool-button"
+        onclick={() => (showInfos = !showInfos)}
+        aria-label="Toggle inspector"
+        title="Toggle inspector"
+      >
+        <Crosshair size={17} strokeWidth={1.9} />
       </button>
     </div>
 
@@ -470,20 +568,53 @@
     position: absolute;
     top: 1rem;
     left: 1rem;
+    z-index: 1;
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.45rem;
+    flex-direction: column;
+    gap: 0.38rem;
+    padding: 0.2rem;
+    border: 1px solid oklch(0.86 0.008 260);
+    border-radius: 0.8rem;
+    background: rgba(255, 255, 255, 0.48);
+    backdrop-filter: blur(2px);
   }
-  .stage-tools button {
-    min-height: 2.25rem;
-    padding: 0.4rem 0.75rem;
+  .tool-button {
+    display: grid;
+    place-items: center;
+    width: 2.45rem;
+    height: 2.45rem;
+    padding: 0;
     border: 1px solid var(--line);
-    border-radius: 999px;
-    background: var(--surface);
+    border-radius: 0.5rem;
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--ink);
     cursor: pointer;
-    font-size: 0.78rem;
   }
-  .stage-tools button:hover { background: var(--surface-raised); }
+  .tool-button:hover { background: rgba(255, 255, 255, 0.9); }
+  .tool-button.active {
+    border-color: rgba(0, 0, 0, 0.22);
+    background: rgba(255, 255, 255, 0.9);
+  }
+  .tool-button :global(svg) {
+    width: 1.05rem;
+    height: 1.05rem;
+    stroke: currentColor;
+  }
+  .tool-button :global(svg *) {
+    vector-effect: non-scaling-stroke;
+  }
+  .ar-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.55rem;
+    height: 1.2rem;
+    border: 1px solid currentColor;
+    border-radius: 0.22rem;
+    font-size: 0.48rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
 
   .infos {
     position: absolute;
